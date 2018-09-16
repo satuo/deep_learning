@@ -57,7 +57,29 @@ acc = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
 # loss
 losses = tf.nn.softmax_cross_entropy_with_logits(logits=y_logtis, labels=y_)
 loss = tf.reduce_mean(losses)
-train_op = tf.train.AdamOptimizer(1e-4).minimize(loss)
+
+#regularizers = tf.nn.l2_loss(b_conv1) + tf.nn.l2_loss(b_conv2) + tf.nn.l2_loss(W_fc1) + tf.nn.l2_loss(b_fc1) + tf.nn.l2_loss(W_fc2) + tf.nn.l2_loss(b_fc2))
+#regularizers = tf.nn.l2_loss(W_conv1) + tf.nn.l2_loss(b_conv1) + \
+#        tf.nn.l2_loss(W_conv2) + tf.nn.l2_loss(b_conv2) + \
+#        tf.nn.l2_loss(W_fc1) + tf.nn.l2_loss(b_fc1) + tf.nn.l2_loss(W_fc2) + tf.nn.l2_loss(b_fc2)
+#regularizers = (tf.nn.l2_loss(W_fc1) + tf.nn.l2_loss(W_fc2))
+regularizers = tf.nn.l2_loss(W_conv1) + tf.nn.l2_loss(W_conv2) + tf.nn.l2_loss(W_fc1) + tf.nn.l2_loss(W_fc2)
+loss += 5e-4 * regularizers
+#train_op = tf.train.AdagradOptimizer(1e-4).minimize(loss)
+
+#base_learn_rate = 1e-4
+batch_size = 100
+#batch = tf.Variable(0, trainable=False)
+#learning_rate = tf.train.exponential_decay(\
+#        base_learn_rate,  # Base learning rate.
+#        batch * batch_size,
+#        mnist.train.num_examples,  # Decay step.
+#        0.85,  # Decay rate
+#        staircase=True)
+#train_op = tf.train.AdamOptimizer(learning_rate).minimize(loss, global_step=batch)
+#train_op = tf.train.AdamOptimizer(1e-4).minimize(loss)
+learning_rate = 1e-4
+train_op = tf.train.AdamOptimizer(learning_rate).minimize(loss)
 
 # train
 session_conf = tf.ConfigProto(allow_soft_placement=True,
@@ -66,12 +88,14 @@ session_conf.gpu_options.allow_growth = True
 sess = tf.Session(config=session_conf)
 with sess.as_default():
     sess.run(tf.global_variables_initializer())
-    for idx in range(3001):
-        batch_x, batch_y = mnist.train.next_batch(50)
+    for idx in range(20001):
+        batch_x, batch_y = mnist.train.next_batch(batch_size)
         # train - op
+        #_, cur_loss, cur_acc, cur_learning_rate = sess.run([train_op, loss, acc, learning_rate], \
         _, cur_loss, cur_acc = sess.run([train_op, loss, acc], \
                 feed_dict={x : batch_x, y_ : batch_y, keep_prob:1.0})
         if idx % 100 == 0:
+            #print >> sys.stderr, 'Train, idx: %s, loss: %s, acc: %s, learn_rate: %s' % (idx, cur_loss, cur_acc, cur_learning_rate)
             print >> sys.stderr, 'Train, idx: %s, loss: %s, acc: %s' % (idx, cur_loss, cur_acc)
             # val - op
             _, cur_loss, cur_acc = sess.run(\
